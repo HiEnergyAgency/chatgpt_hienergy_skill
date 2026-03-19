@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: hienergy-chatgpt-app
+    runtime: python
+    plan: free
+    repo: https://github.com/flyptkarsh/chatgpt_hienergy_skill
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/hienergy_chatgpt_server.py
+    healthCheckPath: /sse/
+    autoDeploy: true
+    envVars:
+      - key: HIENERGY_API_KEY
+        sync: false
+      - key: HIENERGY_BASE_URL
+        value: https://app.hienergy.ai
