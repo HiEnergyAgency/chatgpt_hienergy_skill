@@ -8,7 +8,7 @@ This repo uses a remote MCP server pattern so ChatGPT can call HiEnergy tools ov
 2. Export `HIENERGY_API_KEY`.
 3. Run `python3 scripts/hienergy_chatgpt_server.py`.
 4. Expose the running server through a public HTTPS URL.
-5. Connect ChatGPT to the public `/sse/` URL.
+5. Connect ChatGPT to the public `/sse` URL.
 
 ## Production notes
 

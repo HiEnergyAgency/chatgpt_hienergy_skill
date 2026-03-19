@@ -44,12 +44,12 @@ export PORT="8000"
 python3 scripts/hienergy_chatgpt_server.py
 ```
 
-The server starts on `http://0.0.0.0:8000` by default and exposes the MCP SSE transport from the FastMCP runtime.
+The server starts on `http://0.0.0.0:8000` by default and exposes the MCP SSE transport from the FastMCP runtime at `/sse`.
 
 ## Connecting to ChatGPT
 
 1. Expose the local server over HTTPS, for example with a tunnel or deployment target.
-2. Use the public URL ending in `/sse/`.
+2. Use the public URL ending in `/sse`.
 3. Import that server into ChatGPT as a custom MCP app.
 
 This repo keeps all tools read-only so it is safe to test before adding any write actions.
@@ -60,7 +60,7 @@ This repo includes `render.yaml` for a simple web-service deploy on Render.
 
 - The service starts even if `HIENERGY_API_KEY` is not configured yet.
 - Tool calls will fail with a clear error until you add that secret in Render.
-- The expected ChatGPT connection URL is your deployed base URL plus `/sse/`.
+- The expected ChatGPT connection URL is your deployed base URL plus `/sse`.
 
 ## Available tools
 

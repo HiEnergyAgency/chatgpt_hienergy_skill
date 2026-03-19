@@ -25,7 +25,7 @@ Use this repository as a ChatGPT app version of the existing HiEnergy OpenClaw s
 
 1. `scripts/hienergy_client.py` talks to the HiEnergy API with `HIENERGY_API_KEY`.
 2. `scripts/hienergy_chatgpt_server.py` wraps that client with FastMCP tools.
-3. ChatGPT or the Responses API connects to the server over an SSE endpoint ending in `/sse/`.
+3. ChatGPT or the Responses API connects to the server over an SSE endpoint at `/sse`.
 
 ## Tool Design
 
@@ -49,7 +49,7 @@ python3 scripts/hienergy_chatgpt_server.py
 
 Python 3.10+ is recommended because the FastMCP dependency does not install on Python 3.9.
 
-For ChatGPT, expose the local server through a public HTTPS URL and use the `/sse/` path when connecting.
+For ChatGPT, expose the local server through a public HTTPS URL and use the `/sse` path when connecting.
 
 ## Security
 

@@ -210,7 +210,7 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8000"))
     server = build_server()
     LOGGER.info("Starting HiEnergy MCP server on 0.0.0.0:%s", port)
-    LOGGER.info("Expose the public /sse/ URL to connect this app in ChatGPT.")
+    LOGGER.info("Expose the public /sse URL to connect this app in ChatGPT.")
     if not os.environ.get("HIENERGY_API_KEY"):
         LOGGER.warning(
             "HIENERGY_API_KEY is not set. The server can start, but tool calls will fail "
