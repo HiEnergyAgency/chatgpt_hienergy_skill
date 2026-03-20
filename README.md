@@ -131,11 +131,16 @@ export PORT="8000"
 python3 scripts/hienergy_chatgpt_server.py
 ```
 
-The local server starts on `http://0.0.0.0:8000` by default and exposes FastMCP over `/sse`.
+The local server starts on `http://0.0.0.0:8000` by default and exposes FastMCP streamable HTTP over `/mcp`.
+
+It also exposes:
+
+- `/health` for deployment health checks
+- `/` for a simple JSON status page
 
 ### 4. Expose the local server if needed
 
-If you want to test the local scaffold from ChatGPT, expose it through a public HTTPS URL and use the `/sse` path.
+If you want to test the local scaffold from ChatGPT, expose it through a public HTTPS URL and use the `/mcp` path.
 
 ## Local tool surface
 
@@ -156,7 +161,8 @@ This repo includes `render.yaml` for deploying the local scaffold as a web servi
 
 - The local service starts even if `HIENERGY_API_KEY` is not configured yet.
 - Tool calls fail with a clear error until you add that secret.
-- The deployed local scaffold still uses `/sse`.
+- Render health checks use `/health`.
+- The deployed local scaffold uses `/mcp`.
 - The hosted HiEnergy production MCP server uses `/mcp`.
 
 ## Example direct API client usage

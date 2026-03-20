@@ -12,6 +12,8 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse, PlainTextResponse
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -95,6 +97,22 @@ def build_server(client: Optional[HiEnergyClient] = None) -> FastMCP:
         if client is not None:
             return client
         return HiEnergyClient()
+
+    @mcp.custom_route("/", methods=["GET"])
+    async def root(_: Request) -> JSONResponse:
+        return JSONResponse(
+            {
+                "name": "HiEnergy ChatGPT App",
+                "status": "ok",
+                "mcp_endpoint": "/mcp",
+                "transport": "streamable_http",
+                "docs": "https://app.hienergy.ai/api_documentation/mcp",
+            }
+        )
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health(_: Request) -> PlainTextResponse:
+        return PlainTextResponse("ok")
 
     @mcp.tool()
     def search_advertisers(query: str, limit: int = 10) -> Dict[str, Any]:
@@ -210,13 +228,13 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8000"))
     server = build_server()
     LOGGER.info("Starting HiEnergy MCP server on 0.0.0.0:%s", port)
-    LOGGER.info("Expose the public /sse URL to connect this app in ChatGPT.")
+    LOGGER.info("Expose the public /mcp URL to connect this app in ChatGPT.")
     if not os.environ.get("HIENERGY_API_KEY"):
         LOGGER.warning(
             "HIENERGY_API_KEY is not set. The server can start, but tool calls will fail "
             "until the key is configured."
         )
-    server.run(transport="sse", host="0.0.0.0", port=port)
+    server.run(transport="http", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 HiEnergy now exposes a hosted MCP endpoint at `https://app.hienergy.ai/mcp`.
 
-Use the hosted server for production ChatGPT, Codex, and Responses API integrations. The local FastMCP server in this repo still exists for development and exposes `/sse`.
+Use the hosted server for production ChatGPT, Codex, and Responses API integrations. The local FastMCP server in this repo still exists for development and exposes `/mcp`.
 
 ## Hosted flow
 
@@ -18,7 +18,7 @@ Use the hosted server for production ChatGPT, Codex, and Responses API integrati
 2. Export `HIENERGY_API_KEY`.
 3. Run `python3 scripts/hienergy_chatgpt_server.py`.
 4. Expose the running server through a public HTTPS URL.
-5. Connect ChatGPT to the public `/sse` URL if you are testing the local scaffold.
+5. Connect ChatGPT to the public `/mcp` URL if you are testing the local scaffold.
 
 ## Production notes
 
