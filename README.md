@@ -1,43 +1,52 @@
-# HiEnergy ChatGPT App
+# HiEnergy MCP App
 
-This repository is a ChatGPT-oriented version of the existing HiEnergy OpenClaw skill.
+This repository helps you work with HiEnergy through MCP in two ways:
 
-It supports two paths:
+- Use the hosted HiEnergy MCP server at `https://app.hienergy.ai/mcp`
+- Run the local FastMCP scaffold in this repo for development
 
-- Connect directly to the hosted HiEnergy MCP server at `https://app.hienergy.ai/mcp`
-- Run the local FastMCP scaffold in this repo for development or experimentation
+If you already have a HiEnergy API key, the hosted MCP server is the recommended path.
 
-## What it includes
+## What this repo includes
 
 - A reusable HiEnergy API client in `scripts/hienergy_client.py`
-- A FastMCP server in `scripts/hienergy_chatgpt_server.py`
-- Read-only tools for advertisers, affiliate programs, deals, contacts, and transactions
-- Setup notes for the hosted MCP server, local development, and ChatGPT/Codex connection
+- A local FastMCP scaffold in `scripts/hienergy_chatgpt_server.py`
+- Read-only local tools for advertisers, affiliate programs, deals, contacts, and transactions
+- Setup notes for ChatGPT, Codex, the Responses API, and local development
 - Unit tests for the API client
 
-## Quick start
-
-## Use the hosted HiEnergy MCP server
-
-If you already have a HiEnergy API key, prefer the hosted MCP server instead of running the local scaffold.
+## Recommended quick start
 
 ### ChatGPT
 
-Use the ChatGPT-ready server URL and choose `No Authentication` in the app setup flow:
+Create a remote MCP app using:
 
 ```text
 https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY
 ```
 
-Treat that URL like a secret because it embeds your API key directly.
+Choose `No Authentication` in the ChatGPT setup flow because the URL already contains the API key.
+
+Treat that URL like a secret. If it is shared, rotate the key.
 
 ### Codex
+
+Add the hosted MCP server directly:
 
 ```bash
 codex mcp add hienergy --url "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY"
 ```
 
+Verify it:
+
+```bash
+codex mcp list
+codex mcp get hienergy
+```
+
 ### Responses API
+
+Use an MCP tool block like this:
 
 ```json
 {
@@ -48,9 +57,51 @@ codex mcp add hienergy --url "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY"
 }
 ```
 
-## Run the local scaffold
+## Direct MCP usage
 
-Python 3.10+ is recommended for this repo. The FastMCP package used by the server does not install in the default Python 3.9 runtime on this machine.
+The hosted server accepts JSON-RPC requests on `/mcp`. For low-level clients, authenticate with the standard HiEnergy API key in the `X-Api-Key` header.
+
+Example `initialize` request:
+
+```bash
+curl -X POST https://app.hienergy.ai/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": { "name": "My MCP Client", "version": "1.0.0" }
+    }
+  }'
+```
+
+Example `tools/list` request:
+
+```bash
+curl -X POST https://app.hienergy.ai/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list"
+  }'
+```
+
+The hosted server exposes curated MCP tools plus a broader `api_request` bridge for the authenticated HiEnergy API surface.
+
+## Local development scaffold
+
+Use the local server only when you want to build or test the MCP implementation in this repo. The local scaffold is separate from the hosted HiEnergy production MCP server.
+
+Python 3.10+ is recommended. The FastMCP dependency used by the local scaffold does not install cleanly in the default Python 3.9 runtime on this machine.
 
 ### 1. Install dependencies
 
@@ -74,66 +125,41 @@ export HIENERGY_BASE_URL="https://app.hienergy.ai"
 export PORT="8000"
 ```
 
-### 3. Run the MCP server
+### 3. Run the local MCP server
 
 ```bash
 python3 scripts/hienergy_chatgpt_server.py
 ```
 
-The server starts on `http://0.0.0.0:8000` by default and exposes the FastMCP SSE transport at `/sse`.
+The local server starts on `http://0.0.0.0:8000` by default and exposes FastMCP over `/sse`.
 
-## Connecting to ChatGPT
+### 4. Expose the local server if needed
 
-Preferred production path:
+If you want to test the local scaffold from ChatGPT, expose it through a public HTTPS URL and use the `/sse` path.
 
-1. Use the hosted HiEnergy MCP server at `https://app.hienergy.ai/mcp`.
-2. For ChatGPT, paste the full server URL with `?api_key=YOUR_API_KEY` and choose `No Authentication`.
-3. For Codex or other MCP clients, connect to `/mcp` and authenticate with the same HiEnergy API key.
+## Local tool surface
 
-Local development path:
+The local scaffold currently exposes these read-only tools:
 
-1. Expose the local server over HTTPS, for example with a tunnel or deployment target.
-2. Use the public URL ending in `/sse`.
-3. Import that server into ChatGPT as a custom MCP app if you want to test the local scaffold.
+- `search_advertisers`
+- `get_advertiser_profile`
+- `search_affiliate_programs`
+- `find_deals`
+- `search_contacts`
+- `get_transactions`
 
-This repo keeps all tools read-only so it is safe to test before adding any write actions.
+The hosted HiEnergy MCP server supports a broader production tool set than the local scaffold.
 
 ## Render deployment
 
-This repo includes `render.yaml` for a simple web-service deploy on Render.
+This repo includes `render.yaml` for deploying the local scaffold as a web service.
 
-- The service starts even if `HIENERGY_API_KEY` is not configured yet.
-- Tool calls will fail with a clear error until you add that secret in Render.
-- The local scaffold still expects the deployed base URL plus `/sse`.
+- The local service starts even if `HIENERGY_API_KEY` is not configured yet.
+- Tool calls fail with a clear error until you add that secret.
+- The deployed local scaffold still uses `/sse`.
 - The hosted HiEnergy production MCP server uses `/mcp`.
 
-## Available tools
-
-### `search_advertisers`
-
-Search advertisers by brand name, domain, or URL.
-
-### `get_advertiser_profile`
-
-Fetch a single advertiser profile, including the HiEnergy deep link.
-
-### `search_affiliate_programs`
-
-Find advertiser/program candidates and optionally filter by minimum commission percent.
-
-### `find_deals`
-
-Look up deals by search term with optional country and active-only filters.
-
-### `search_contacts`
-
-Find partner contacts for a brand or query.
-
-### `get_transactions`
-
-Retrieve transactions with optional advertiser and date filtering.
-
-## Example direct usage
+## Example direct API client usage
 
 ```bash
 python3 example_usage.py
@@ -141,12 +167,42 @@ python3 example_usage.py
 
 ## Testing
 
+Run the unit tests:
+
 ```bash
 python3 -m unittest test_hienergy_client.py -v
 ```
 
-## Suggested next steps
+Optional smoke test against the hosted MCP server:
 
-- Add OAuth if this will be connected in a shared ChatGPT workspace
-- Add richer tool annotations or write actions once the read-only flow is working
-- Deploy behind a stable HTTPS endpoint for ChatGPT import
+```bash
+python3 - <<'PY'
+import requests
+
+url = "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY"
+headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "MCP-Protocol-Version": "2025-11-25",
+}
+payload = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2025-11-25",
+        "capabilities": {},
+        "clientInfo": {"name": "README smoke test", "version": "1.0.0"},
+    },
+}
+response = requests.post(url, headers=headers, json=payload, timeout=30)
+print(response.status_code)
+print(response.json().get("result", {}).get("serverInfo", {}))
+PY
+```
+
+## Notes
+
+- Prefer the hosted `/mcp` endpoint for real usage.
+- Use the local scaffold when you need to change server behavior in this repo.
+- Add OAuth before sharing this in a broader workspace or production environment.
