@@ -48,17 +48,36 @@ class HiEnergyClient:
             return self.DEFAULT_LIMIT
         return max(1, min(int(limit), self.MAX_LIMIT))
 
-    def _request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        clean_endpoint = endpoint.lstrip("/")
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
+        use_api_prefix: bool = True,
+    ) -> Dict[str, Any]:
+        clean_endpoint = endpoint.strip()
         if clean_endpoint.startswith(("http://", "https://")) or ".." in clean_endpoint:
             raise HiEnergyClientError("Invalid endpoint path.")
 
-        url = f"{self.base_url}/api/v1/{clean_endpoint}"
+        if use_api_prefix:
+            url = f"{self.base_url}/api/v1/{clean_endpoint.lstrip('/')}"
+        else:
+            if not clean_endpoint.startswith("/"):
+                clean_endpoint = f"/{clean_endpoint}"
+            url = f"{self.base_url}{clean_endpoint}"
+
+        headers = dict(self.headers)
+        if extra_headers:
+            headers.update(extra_headers)
         try:
-            response = self.session.get(
+            response = self.session.request(
+                method.upper(),
                 url,
-                headers=self.headers,
+                headers=headers,
                 params=params,
+                json=body,
                 timeout=self.REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
@@ -93,7 +112,22 @@ class HiEnergyClient:
         if not isinstance(payload, dict):
             return []
 
-        for wrapper_key in ("advertisers", "deals", "contacts", "transactions"):
+        for wrapper_key in (
+            "advertisers",
+            "agencies",
+            "contacts",
+            "deals",
+            "domains",
+            "networks",
+            "opportunities",
+            "publishers",
+            "status_changes",
+            "tags",
+            "tools",
+            "transactions",
+            "users",
+            "verticals",
+        ):
             wrapped = payload.get(wrapper_key)
             if isinstance(wrapped, dict) and "data" in wrapped:
                 return self._extract_list(wrapped)
@@ -135,6 +169,7 @@ class HiEnergyClient:
             for field_name in ("domain", "url"):
                 try:
                     response = self._request(
+                        "GET",
                         "advertisers/search_by_domain",
                         params={field_name: query, "limit": limit},
                     )
@@ -147,13 +182,13 @@ class HiEnergyClient:
         params: Dict[str, Any] = {"limit": limit}
         if query:
             params["search"] = query
-        response = self._request("advertisers", params=params)
+        response = self._request("GET", "advertisers", params=params)
         return self._extract_list(response)
 
     def get_advertiser(self, advertiser_id: str) -> Dict[str, Any]:
         if not advertiser_id:
             raise HiEnergyClientError("advertiser_id is required.")
-        response = self._request(f"advertisers/{advertiser_id}")
+        response = self._request("GET", f"advertisers/{advertiser_id}")
         return self._extract_one(response)
 
     def search_affiliate_programs(
@@ -191,14 +226,14 @@ class HiEnergyClient:
             params["search"] = query
         if country:
             params["country"] = country
-        response = self._request("deals", params=params)
+        response = self._request("GET", "deals", params=params)
         return self._extract_list(response)
 
     def search_contacts(self, query: Optional[str] = None, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
         params: Dict[str, Any] = {"limit": self._clamp_limit(limit)}
         if query:
             params["search"] = query
-        response = self._request("contacts", params=params)
+        response = self._request("GET", "contacts", params=params)
         return self._extract_list(response)
 
     def get_transactions(
@@ -215,6 +250,29 @@ class HiEnergyClient:
             params["start_date"] = start_date
         if end_date:
             params["end_date"] = end_date
-        response = self._request("transactions", params=params)
+        response = self._request("GET", "transactions", params=params)
         return self._extract_list(response)
 
+    def api_request(
+        self,
+        path: str,
+        method: str = "GET",
+        query: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not path or not path.startswith("/api/"):
+            raise HiEnergyClientError("path must start with /api/.")
+
+        extra_headers: Dict[str, str] = {}
+        if idempotency_key:
+            extra_headers["Idempotency-Key"] = idempotency_key
+
+        return self._request(
+            method=method,
+            endpoint=path,
+            params=query,
+            body=body,
+            extra_headers=extra_headers or None,
+            use_api_prefix=False,
+        )
