@@ -2,17 +2,53 @@
 
 This repository is a ChatGPT-oriented version of the existing HiEnergy OpenClaw skill.
 
-Instead of packaging the capability as an OpenClaw skill, this repo exposes HiEnergy data through a remote MCP server so ChatGPT can call it as an app or through the OpenAI Responses API.
+It supports two paths:
+
+- Connect directly to the hosted HiEnergy MCP server at `https://app.hienergy.ai/mcp`
+- Run the local FastMCP scaffold in this repo for development or experimentation
 
 ## What it includes
 
 - A reusable HiEnergy API client in `scripts/hienergy_client.py`
 - A FastMCP server in `scripts/hienergy_chatgpt_server.py`
 - Read-only tools for advertisers, affiliate programs, deals, contacts, and transactions
-- Setup notes for local development and ChatGPT connection
+- Setup notes for the hosted MCP server, local development, and ChatGPT/Codex connection
 - Unit tests for the API client
 
 ## Quick start
+
+## Use the hosted HiEnergy MCP server
+
+If you already have a HiEnergy API key, prefer the hosted MCP server instead of running the local scaffold.
+
+### ChatGPT
+
+Use the ChatGPT-ready server URL and choose `No Authentication` in the app setup flow:
+
+```text
+https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY
+```
+
+Treat that URL like a secret because it embeds your API key directly.
+
+### Codex
+
+```bash
+codex mcp add hienergy --url "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY"
+```
+
+### Responses API
+
+```json
+{
+  "type": "mcp",
+  "server_label": "hienergy",
+  "server_url": "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY",
+  "require_approval": "never"
+}
+```
+
+## Run the local scaffold
 
 Python 3.10+ is recommended for this repo. The FastMCP package used by the server does not install in the default Python 3.9 runtime on this machine.
 
@@ -44,13 +80,21 @@ export PORT="8000"
 python3 scripts/hienergy_chatgpt_server.py
 ```
 
-The server starts on `http://0.0.0.0:8000` by default and exposes the MCP SSE transport from the FastMCP runtime at `/sse`.
+The server starts on `http://0.0.0.0:8000` by default and exposes the FastMCP SSE transport at `/sse`.
 
 ## Connecting to ChatGPT
 
+Preferred production path:
+
+1. Use the hosted HiEnergy MCP server at `https://app.hienergy.ai/mcp`.
+2. For ChatGPT, paste the full server URL with `?api_key=YOUR_API_KEY` and choose `No Authentication`.
+3. For Codex or other MCP clients, connect to `/mcp` and authenticate with the same HiEnergy API key.
+
+Local development path:
+
 1. Expose the local server over HTTPS, for example with a tunnel or deployment target.
 2. Use the public URL ending in `/sse`.
-3. Import that server into ChatGPT as a custom MCP app.
+3. Import that server into ChatGPT as a custom MCP app if you want to test the local scaffold.
 
 This repo keeps all tools read-only so it is safe to test before adding any write actions.
 
@@ -60,7 +104,8 @@ This repo includes `render.yaml` for a simple web-service deploy on Render.
 
 - The service starts even if `HIENERGY_API_KEY` is not configured yet.
 - Tool calls will fail with a clear error until you add that secret in Render.
-- The expected ChatGPT connection URL is your deployed base URL plus `/sse`.
+- The local scaffold still expects the deployed base URL plus `/sse`.
+- The hosted HiEnergy production MCP server uses `/mcp`.
 
 ## Available tools
 
