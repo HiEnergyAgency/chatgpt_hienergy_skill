@@ -20,12 +20,14 @@ Use this repository as a ChatGPT app version of the existing HiEnergy OpenClaw s
 - The repo exposes HiEnergy data to ChatGPT through a remote MCP server.
 - The server is read-only by default and focuses on advertiser discovery, affiliate programs, deals, contacts, and transaction lookups.
 - ChatGPT handles the natural-language layer; the MCP tools return structured data.
+- The hosted production MCP endpoint is `https://app.hienergy.ai/mcp`.
 
 ## Architecture
 
 1. `scripts/hienergy_client.py` talks to the HiEnergy API with `HIENERGY_API_KEY`.
 2. `scripts/hienergy_chatgpt_server.py` wraps that client with FastMCP tools.
-3. ChatGPT or the Responses API connects to the server over an SSE endpoint at `/sse`.
+3. The hosted HiEnergy MCP server uses the streamable HTTP endpoint at `/mcp`.
+4. The local FastMCP scaffold in this repo exposes `/sse` for development.
 
 ## Tool Design
 
@@ -50,6 +52,18 @@ python3 scripts/hienergy_chatgpt_server.py
 Python 3.10+ is recommended because the FastMCP dependency does not install on Python 3.9.
 
 For ChatGPT, expose the local server through a public HTTPS URL and use the `/sse` path when connecting.
+
+If you already have a HiEnergy API key, prefer connecting directly to the hosted server:
+
+```text
+https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY
+```
+
+For Codex, add it with:
+
+```bash
+codex mcp add hienergy --url "https://app.hienergy.ai/mcp?api_key=YOUR_API_KEY"
+```
 
 ## Security
 
