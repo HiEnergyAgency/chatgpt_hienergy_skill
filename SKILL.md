@@ -18,7 +18,7 @@ Use this repository as a ChatGPT app version of the existing HiEnergy OpenClaw s
 ## Overview
 
 - The repo exposes HiEnergy data to ChatGPT through a remote MCP server.
-- The server is read-only by default and focuses on advertiser discovery, affiliate programs, deals, contacts, and transaction lookups.
+- The local scaffold now exposes a broader authenticated tool set, discovery resources, and a generic `api_request` bridge.
 - ChatGPT handles the natural-language layer; the MCP tools return structured data.
 - The hosted production MCP endpoint is `https://app.hienergy.ai/mcp`.
 
@@ -31,12 +31,10 @@ Use this repository as a ChatGPT app version of the existing HiEnergy OpenClaw s
 
 ## Tool Design
 
-- `search_advertisers` for name, domain, and URL lookup
-- `get_advertiser_profile` for deeper advertiser details
-- `search_affiliate_programs` for commission-focused program lookup
-- `find_deals` for active offers and market filters
-- `search_contacts` for partner discovery
-- `get_transactions` for light reporting and analytics
+- Curated search tools for advertisers, transactions, deals, contacts, domains, verticals, tags, agencies, and networks
+- Discovery resources for the OpenAPI schema and curated tool catalog
+- Admin/workflow tools such as `create_contact`, `create_referred_user`, `create_publisher`, `update_publisher`, and `generate_deeplink`
+- A generic `api_request` bridge for broader authenticated `/api` access
 
 ## Setup
 

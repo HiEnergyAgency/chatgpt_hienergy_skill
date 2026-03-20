@@ -25,11 +25,15 @@ logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
 
 SERVER_INSTRUCTIONS = """
-This MCP server exposes read-only HiEnergy affiliate intelligence tools for ChatGPT.
-Use these tools to search advertisers, inspect advertiser profiles, research affiliate
-programs, review active deals, find contacts, and retrieve light transaction data.
+This MCP server exposes authenticated HiEnergy affiliate intelligence tools for ChatGPT.
+Use the curated tools for common advertiser, deal, contact, publisher, and transaction
+workflows. Use api_request when you need broader access to the authenticated /api surface.
+This server also exposes discovery resources for the OpenAPI schema and curated tool catalog.
 Return structured tool data first; let ChatGPT produce the final natural-language answer.
 """
+
+OPENAPI_RESOURCE_URI = "openapi://project-rocket/schema"
+TOOL_CATALOG_RESOURCE_URI = "tools://project-rocket/catalog"
 
 
 def _deep_link(advertiser_id: Optional[Any]) -> Optional[str]:
@@ -89,6 +93,50 @@ def _shape_transaction(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _compact(params: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: value for key, value in params.items() if value not in (None, "", [], {})}
+
+
+def _tool_catalog() -> List[Dict[str, Any]]:
+    return [
+        {"name": "search_advertisers", "description": "Search for advertisers by various criteria", "method": "GET", "endpoint": "/api/v1/advertisers"},
+        {"name": "get_advertiser", "description": "Get detailed information about a specific advertiser", "method": "GET", "endpoint": "/api/v1/advertisers/{id}"},
+        {"name": "get_similar_advertisers", "description": "Get similar advertisers for a given advertiser", "method": "GET", "endpoint": "/api/v1/advertisers/{id}/similar_advertisers"},
+        {"name": "get_related_advertisers", "description": "Get related advertisers for a given advertiser", "method": "GET", "endpoint": "/api/v1/advertisers/{id}/related_advertisers"},
+        {"name": "search_advertisers_by_domain", "description": "Search advertisers using the advertiser domain lookup endpoint", "method": "GET", "endpoint": "/api/v1/advertisers/search_by_domain"},
+        {"name": "list_opportunities", "description": "List opportunity advertisers for the current scope", "method": "GET", "endpoint": "/api/v1/opportunities"},
+        {"name": "search_transactions", "description": "Search for transactions by various criteria", "method": "GET", "endpoint": "/api/v1/transactions"},
+        {"name": "get_transaction", "description": "Get detailed information about a specific transaction", "method": "GET", "endpoint": "/api/v1/transactions/{id}"},
+        {"name": "search_deals", "description": "Search for deals by various criteria", "method": "GET", "endpoint": "/api/v1/deals"},
+        {"name": "get_deal", "description": "Get detailed information about a specific deal", "method": "GET", "endpoint": "/api/v1/deals/{id}"},
+        {"name": "search_contacts", "description": "Search contacts by domain, advertiser, email, or free-form query", "method": "GET", "endpoint": "/api/v1/contacts"},
+        {"name": "search_domains", "description": "Search for advertisers by domain", "method": "GET", "endpoint": "/api/v1/domains/search"},
+        {"name": "get_verticals", "description": "Get list of available verticals/industries", "method": "GET", "endpoint": "/api/v1/verticals"},
+        {"name": "list_api_tools", "description": "List the API's published tool metadata", "method": "GET", "endpoint": "/api/v1/tools"},
+        {"name": "get_api_schema", "description": "Fetch the OpenAPI schema for the authenticated API", "method": "GET", "endpoint": "/api/v1/schema"},
+        {"name": "list_agencies", "description": "List agencies available to the current scope", "method": "GET", "endpoint": "/api/v1/agencies"},
+        {"name": "get_agency", "description": "Get detailed information about a specific agency", "method": "GET", "endpoint": "/api/v1/agencies/{id}"},
+        {"name": "list_networks", "description": "List affiliate networks available to the current scope", "method": "GET", "endpoint": "/api/v1/networks"},
+        {"name": "get_network", "description": "Get detailed information about a specific network", "method": "GET", "endpoint": "/api/v1/networks/{id}"},
+        {"name": "list_status_changes", "description": "Search advertiser status changes for the current scope", "method": "GET", "endpoint": "/api/v1/status_changes"},
+        {"name": "list_tags", "description": "Search tags and categories", "method": "GET", "endpoint": "/api/v1/tags"},
+        {"name": "get_tag_advertisers", "description": "List advertisers associated with a specific tag", "method": "GET", "endpoint": "/api/v1/tags/{id}/advertisers"},
+        {"name": "generate_deeplink", "description": "Generate a deeplink for a destination URL or known program", "method": "POST", "endpoint": "/api/v1/deeplinks/generate"},
+        {"name": "get_publisher", "description": "Get detailed information about a specific publisher", "method": "GET", "endpoint": "/api/v1/publishers/{id}"},
+        {"name": "update_publisher", "description": "Update a publisher record", "method": "PATCH", "endpoint": "/api/v1/publishers/{id}"},
+        {"name": "create_referred_user", "description": "Create a new user and automatically set the API caller as referred_by", "method": "POST", "endpoint": "/api/v1/users"},
+        {"name": "create_publisher", "description": "Create a new publisher record (admin-only)", "method": "POST", "endpoint": "/api/v1/publishers"},
+        {"name": "create_contact", "description": "Create a contact for an advertiser (admin-only endpoint)", "method": "POST", "endpoint": "/api/v1/contacts"},
+        {"name": "add_contact", "description": "Add a contact for an advertiser (admin-only endpoint)", "method": "POST", "endpoint": "/api/v1/contacts"},
+        {"name": "replace_contact", "description": "Reassign a contact to a different advertiser", "method": "POST", "endpoint": "/api/v1/contacts/{id}/replace"},
+        {"name": "api_request", "description": "Call any authenticated JSON endpoint under /api/ to reach the app's broader API capabilities through MCP.", "method": "POST", "endpoint": "/api/{...}"},
+        {"name": "get_advertiser_profile", "description": "Legacy alias for get_advertiser", "method": "GET", "endpoint": "/api/v1/advertisers/{id}"},
+        {"name": "find_deals", "description": "Legacy alias for search_deals", "method": "GET", "endpoint": "/api/v1/deals"},
+        {"name": "get_transactions", "description": "Legacy alias for search_transactions", "method": "GET", "endpoint": "/api/v1/transactions"},
+        {"name": "search_affiliate_programs", "description": "Estimate affiliate-program matches using advertiser data", "method": "GET", "endpoint": "/api/v1/advertisers"},
+    ]
+
+
 def build_server(client: Optional[HiEnergyClient] = None) -> FastMCP:
     mcp = FastMCP(name="HiEnergy ChatGPT App", instructions=SERVER_INSTRUCTIONS)
 
@@ -115,25 +163,505 @@ def build_server(client: Optional[HiEnergyClient] = None) -> FastMCP:
         return PlainTextResponse("ok")
 
     @mcp.tool()
-    def search_advertisers(query: str, limit: int = 10) -> Dict[str, Any]:
+    def search_advertisers(
+        query: Optional[str] = None,
+        name: Optional[str] = None,
+        domain: Optional[str] = None,
+        network: Optional[str] = None,
+        country: Optional[str] = None,
+        vertical: Optional[str] = None,
+        limit: int = 20,
+        cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
-        Search HiEnergy advertisers by brand name, domain, or URL.
-        Returns structured advertiser results for ChatGPT to summarize.
+        Search advertisers by various criteria using the authenticated API.
         """
-        results = get_client().search_advertisers(query=query, limit=limit)
-        return {
-            "query": query,
-            "count": len(results),
-            "results": [_shape_advertiser(item) for item in results],
-        }
+        return get_client().api_request(
+            "/api/v1/advertisers",
+            query=_compact(
+                {
+                    "name": name or query,
+                    "domain": domain,
+                    "network": network,
+                    "country": country,
+                    "vertical": vertical,
+                    "limit": limit,
+                    "cursor": cursor,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def get_advertiser(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific advertiser.
+        """
+        return get_client().api_request(f"/api/v1/advertisers/{id}")
 
     @mcp.tool()
     def get_advertiser_profile(advertiser_id: str) -> Dict[str, Any]:
         """
-        Fetch a single HiEnergy advertiser profile by advertiser id.
+        Legacy alias for get_advertiser.
         """
         advertiser = get_client().get_advertiser(advertiser_id)
         return _shape_advertiser(advertiser)
+
+    @mcp.tool()
+    def get_similar_advertisers(id: str) -> Dict[str, Any]:
+        """
+        Get similar advertisers for a given advertiser.
+        """
+        return get_client().api_request(f"/api/v1/advertisers/{id}/similar_advertisers")
+
+    @mcp.tool()
+    def get_related_advertisers(id: str) -> Dict[str, Any]:
+        """
+        Get related advertisers for a given advertiser.
+        """
+        return get_client().api_request(f"/api/v1/advertisers/{id}/related_advertisers")
+
+    @mcp.tool()
+    def search_advertisers_by_domain(
+        domain: str,
+        limit: Optional[int] = None,
+        cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search advertisers using the advertiser domain lookup endpoint.
+        """
+        return get_client().api_request(
+            "/api/v1/advertisers/search_by_domain",
+            query=_compact({"domain": domain, "limit": limit, "cursor": cursor}),
+        )
+
+    @mcp.tool()
+    def list_opportunities(
+        publisher_id: Optional[int] = None,
+        sort: Optional[str] = None,
+        order: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        List opportunity advertisers for the current scope.
+        """
+        return get_client().api_request(
+            "/api/v1/opportunities",
+            query=_compact(
+                {
+                    "publisher_id": publisher_id,
+                    "sort": sort,
+                    "order": order,
+                    "page": page,
+                    "per_page": per_page,
+                    "limit": limit,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def search_transactions(
+        advertiser_id: Optional[str] = None,
+        advertiser_slug: Optional[str] = None,
+        network_id: Optional[str] = None,
+        network_slug: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        currency: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        include_total: Optional[bool] = None,
+        include_count: Optional[bool] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search for transactions by various criteria.
+        """
+        return get_client().api_request(
+            "/api/v1/transactions",
+            query=_compact(
+                {
+                    "advertiser_id": advertiser_id,
+                    "advertiser_slug": advertiser_slug,
+                    "network_id": network_id,
+                    "network_slug": network_slug,
+                    "start_date": start_date or date_from,
+                    "end_date": end_date or date_to,
+                    "currency": currency,
+                    "sort_by": sort_by,
+                    "sort_order": sort_order,
+                    "page": page,
+                    "per_page": per_page,
+                    "include_total": include_total,
+                    "include_count": include_count,
+                    "limit": limit,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def get_transaction(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific transaction.
+        """
+        return get_client().api_request(f"/api/v1/transactions/{id}")
+
+    @mcp.tool()
+    def search_deals(
+        q: Optional[str] = None,
+        advertiser_id: Optional[str] = None,
+        advertiser_slug: Optional[str] = None,
+        vertical_id: Optional[str] = None,
+        vertical: Optional[str] = None,
+        country: Optional[str] = None,
+        status: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+        cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search for deals by various criteria.
+        """
+        return get_client().api_request(
+            "/api/v1/deals",
+            query=_compact(
+                {
+                    "q": q,
+                    "advertiser_id": advertiser_id,
+                    "advertiser_slug": advertiser_slug,
+                    "vertical_id": vertical_id,
+                    "vertical": vertical,
+                    "country": country,
+                    "status": status,
+                    "page": page,
+                    "per_page": per_page,
+                    "limit": limit,
+                    "cursor": cursor,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def get_deal(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific deal.
+        """
+        return get_client().api_request(f"/api/v1/deals/{id}")
+
+    @mcp.tool()
+    def find_deals(
+        query: Optional[str] = None,
+        country: Optional[str] = None,
+        active_only: bool = True,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Legacy alias for search_deals.
+        """
+        status = "active" if active_only else None
+        return search_deals(q=query, country=country, status=status, limit=limit)
+
+    @mcp.tool()
+    def search_contacts(
+        q: Optional[str] = None,
+        query: Optional[str] = None,
+        domain: Optional[str] = None,
+        advertiser_id: Optional[str] = None,
+        advertiser_name: Optional[str] = None,
+        email: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search contacts by domain, advertiser, email, or free-form query.
+        """
+        return get_client().api_request(
+            "/api/v1/contacts",
+            query=_compact(
+                {
+                    "q": q or query,
+                    "domain": domain,
+                    "advertiser_id": advertiser_id,
+                    "advertiser_name": advertiser_name,
+                    "email": email,
+                    "page": page,
+                    "per_page": per_page,
+                    "limit": limit,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def search_domains(
+        domain: str,
+        limit: Optional[int] = None,
+        cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search for advertisers by domain.
+        """
+        return get_client().api_request(
+            "/api/v1/domains/search",
+            query=_compact({"domain": domain, "limit": limit, "cursor": cursor}),
+        )
+
+    @mcp.tool()
+    def get_verticals(limit: int = 20, cursor: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get list of available verticals/industries.
+        """
+        return get_client().api_request(
+            "/api/v1/verticals",
+            query=_compact({"limit": limit, "cursor": cursor}),
+        )
+
+    @mcp.resource(OPENAPI_RESOURCE_URI)
+    def openapi_schema() -> Dict[str, Any]:
+        """
+        Full OpenAPI schema for the authenticated HiEnergy API.
+        """
+        return get_client().api_request("/api/v1/schema")
+
+    @mcp.resource(TOOL_CATALOG_RESOURCE_URI)
+    def curated_tool_catalog() -> Dict[str, Any]:
+        """
+        Human-oriented summary of the local curated tool catalog.
+        """
+        return {
+            "server": "project_rocket_local",
+            "note": "This local scaffold mirrors a broad subset of the hosted HiEnergy MCP server. Use api_request for unsupported endpoints.",
+            "tools": _tool_catalog(),
+        }
+
+    @mcp.tool()
+    def list_api_tools() -> Dict[str, Any]:
+        """
+        List the published tool metadata for this local scaffold.
+        """
+        return curated_tool_catalog()
+
+    @mcp.tool()
+    def get_api_schema() -> Dict[str, Any]:
+        """
+        Fetch the OpenAPI schema for the authenticated API.
+        """
+        return openapi_schema()
+
+    @mcp.tool()
+    def list_agencies(
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        List agencies available to the current scope.
+        """
+        return get_client().api_request(
+            "/api/v1/agencies",
+            query=_compact({"page": page, "per_page": per_page, "limit": limit}),
+        )
+
+    @mcp.tool()
+    def get_agency(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific agency.
+        """
+        return get_client().api_request(f"/api/v1/agencies/{id}")
+
+    @mcp.tool()
+    def list_networks(
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        List affiliate networks available to the current scope.
+        """
+        return get_client().api_request(
+            "/api/v1/networks",
+            query=_compact({"page": page, "per_page": per_page, "limit": limit}),
+        )
+
+    @mcp.tool()
+    def get_network(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific network.
+        """
+        return get_client().api_request(f"/api/v1/networks/{id}")
+
+    @mcp.tool()
+    def list_status_changes(
+        q: Optional[str] = None,
+        from_status: Optional[str] = None,
+        to_status: Optional[str] = None,
+        advertiser_id: Optional[int] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search advertiser status changes for the current scope.
+        """
+        return get_client().api_request(
+            "/api/v1/status_changes",
+            query=_compact(
+                {
+                    "q": q,
+                    "from_status": from_status,
+                    "to_status": to_status,
+                    "advertiser_id": advertiser_id,
+                    "page": page,
+                    "per_page": per_page,
+                    "limit": limit,
+                }
+            ),
+        )
+
+    @mcp.tool()
+    def list_tags(
+        search: Optional[str] = None,
+        q: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search tags and categories.
+        """
+        return get_client().api_request(
+            "/api/v1/tags",
+            query=_compact({"search": search or q, "page": page, "per_page": per_page}),
+        )
+
+    @mcp.tool()
+    def get_tag_advertisers(
+        id: str,
+        network_id: Optional[int] = None,
+        status: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        List advertisers associated with a specific tag.
+        """
+        return get_client().api_request(
+            f"/api/v1/tags/{id}/advertisers",
+            query=_compact({"network_id": network_id, "status": status}),
+        )
+
+    @mcp.tool()
+    def generate_deeplink(
+        url: str,
+        program_id: Optional[int] = None,
+        custom_code: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate a deeplink for a destination URL or known program.
+        """
+        return get_client().api_request(
+            "/api/v1/deeplinks/generate",
+            method="POST",
+            body=_compact({"url": url, "program_id": program_id, "custom_code": custom_code}),
+        )
+
+    @mcp.tool()
+    def get_publisher(id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific publisher.
+        """
+        return get_client().api_request(f"/api/v1/publishers/{id}")
+
+    @mcp.tool()
+    def update_publisher(id: str, publisher: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update a publisher record.
+        """
+        return get_client().api_request(
+            f"/api/v1/publishers/{id}",
+            method="PATCH",
+            body={"publisher": publisher},
+        )
+
+    @mcp.tool()
+    def create_referred_user(user: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new user and automatically set the API caller as referred_by.
+        """
+        return get_client().api_request(
+            "/api/v1/users",
+            method="POST",
+            body={"user": user},
+        )
+
+    @mcp.tool()
+    def create_publisher(publisher: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new publisher record.
+        """
+        return get_client().api_request(
+            "/api/v1/publishers",
+            method="POST",
+            body={"publisher": publisher},
+        )
+
+    @mcp.tool()
+    def create_contact(contact: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a contact for an advertiser.
+        """
+        return get_client().api_request(
+            "/api/v1/contacts",
+            method="POST",
+            body={"contact": contact},
+        )
+
+    @mcp.tool()
+    def add_contact(contact: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add a contact for an advertiser.
+        """
+        return create_contact(contact)
+
+    @mcp.tool()
+    def replace_contact(
+        id: str,
+        advertiser_id: Optional[int] = None,
+        advertiser: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Reassign a contact to a different advertiser.
+        """
+        replacement = advertiser or ({"id": advertiser_id} if advertiser_id is not None else None)
+        if replacement is None:
+            raise ValueError("advertiser_id or advertiser is required.")
+        return get_client().api_request(
+            f"/api/v1/contacts/{id}/replace",
+            method="POST",
+            body={"advertiser": replacement},
+        )
+
+    @mcp.tool()
+    def api_request(
+        path: str,
+        method: str = "GET",
+        query: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Call any authenticated JSON endpoint under /api/ to reach the broader API surface.
+        """
+        return get_client().api_request(
+            path=path,
+            method=method,
+            query=query,
+            body=body,
+            idempotency_key=idempotency_key,
+        )
 
     @mcp.tool()
     def search_affiliate_programs(
@@ -162,42 +690,6 @@ def build_server(client: Optional[HiEnergyClient] = None) -> FastMCP:
         }
 
     @mcp.tool()
-    def find_deals(
-        query: Optional[str] = None,
-        country: Optional[str] = None,
-        active_only: bool = True,
-        limit: int = 10,
-    ) -> Dict[str, Any]:
-        """
-        Find HiEnergy deals with optional search text, country, and active filter.
-        """
-        results = get_client().find_deals(
-            query=query,
-            country=country,
-            active_only=active_only,
-            limit=limit,
-        )
-        return {
-            "query": query,
-            "country": country,
-            "active_only": active_only,
-            "count": len(results),
-            "results": [_shape_deal(item) for item in results],
-        }
-
-    @mcp.tool()
-    def search_contacts(query: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
-        """
-        Search HiEnergy partner contacts by name, company, or query string.
-        """
-        results = get_client().search_contacts(query=query, limit=limit)
-        return {
-            "query": query,
-            "count": len(results),
-            "results": [_shape_contact(item) for item in results],
-        }
-
-    @mcp.tool()
     def get_transactions(
         advertiser_id: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -205,7 +697,7 @@ def build_server(client: Optional[HiEnergyClient] = None) -> FastMCP:
         limit: int = 10,
     ) -> Dict[str, Any]:
         """
-        Retrieve HiEnergy transactions with optional advertiser and date filters.
+        Legacy alias for search_transactions that returns the simplified transaction shape.
         """
         results = get_client().get_transactions(
             advertiser_id=advertiser_id,

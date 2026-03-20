@@ -11,7 +11,7 @@ If you already have a HiEnergy API key, the hosted MCP server is the recommended
 
 - A reusable HiEnergy API client in `scripts/hienergy_client.py`
 - A local FastMCP scaffold in `scripts/hienergy_chatgpt_server.py`
-- Read-only local tools for advertisers, affiliate programs, deals, contacts, and transactions
+- A local curated MCP tool set plus a generic `api_request` bridge and discovery resources
 - Setup notes for ChatGPT, Codex, the Responses API, and local development
 - Unit tests for the API client
 
@@ -144,16 +144,15 @@ If you want to test the local scaffold from ChatGPT, expose it through a public 
 
 ## Local tool surface
 
-The local scaffold currently exposes these read-only tools:
+The local scaffold now mirrors a broader subset of the hosted HiEnergy MCP docs:
 
-- `search_advertisers`
-- `get_advertiser_profile`
-- `search_affiliate_programs`
-- `find_deals`
-- `search_contacts`
-- `get_transactions`
+- Advertiser discovery and detail tools such as `search_advertisers`, `get_advertiser`, `get_similar_advertisers`, and `get_related_advertisers`
+- Search and reporting tools for deals, transactions, contacts, domains, verticals, agencies, networks, status changes, and tags
+- Discovery helpers `list_api_tools`, `get_api_schema`, `resources/list`, and `resources/read`
+- Admin and workflow tools such as `create_contact`, `add_contact`, `replace_contact`, `create_referred_user`, `create_publisher`, `update_publisher`, and `generate_deeplink`
+- The generic `api_request` bridge for authenticated `/api` access beyond the curated wrappers
 
-The hosted HiEnergy MCP server supports a broader production tool set than the local scaffold.
+The hosted HiEnergy MCP server still has the most complete production surface. Use `api_request` from the local scaffold when you need an authenticated endpoint that is not yet wrapped as a named local tool.
 
 ## Render deployment
 
