@@ -1,12 +1,12 @@
 ---
 name: hienergy-chatgpt-app
 description: >-
-  Build and operate a ChatGPT-compatible HiEnergy app backed by a remote MCP
-  server. Use this skill when you need to expose HiEnergy advertisers,
-  affiliate programs, deals, contacts, and transaction lookups to ChatGPT or
-  the OpenAI Responses API. Includes a FastMCP server, a reusable HiEnergy API
-  client, local setup instructions, and deployment guidance for private
-  workspace use.
+  Build and operate a ChatGPT-compatible HiEnergy app backed by the latest
+  HiEnergy MCP server. Use this skill when you need to expose or maintain
+  authenticated advertiser, deal, contact, transaction, publisher, user, API
+  schema, or generic /api workflows for ChatGPT, Codex, or the OpenAI
+  Responses API. Includes a FastMCP server, a reusable HiEnergy API client,
+  discovery resources, and deployment guidance for private workspace use.
 homepage: https://www.hienergy.ai
 metadata: {"openclaw":{"homepage":"https://www.hienergy.ai","requires":{"env":["HIENERGY_API_KEY"]},"primaryEnv":"HIENERGY_API_KEY"}}
 ---

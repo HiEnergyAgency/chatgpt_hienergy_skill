@@ -1,4 +1,4 @@
 interface:
   display_name: "HiEnergy ChatGPT App"
-  short_description: "Use or maintain the HiEnergy MCP app for ChatGPT and Codex"
-  default_prompt: "Use $hienergy-chatgpt-app to connect to or maintain the HiEnergy MCP server for ChatGPT, Codex, or the Responses API."
+  short_description: "Use or maintain the latest HiEnergy MCP app for ChatGPT and Codex"
+  default_prompt: "Use $hienergy-chatgpt-app to connect to or maintain the latest HiEnergy MCP server, including discovery resources and the api_request bridge, for ChatGPT, Codex, or the Responses API."

@@ -22,7 +22,8 @@ Use the hosted server for production ChatGPT, Codex, and Responses API integrati
 
 ## Production notes
 
-- Keep the current tool set read-only until you are comfortable with the flow.
+- The hosted HiEnergy MCP server now exposes a broader authenticated tool set, discovery resources, and a generic `api_request` bridge.
+- The local scaffold mirrors a broad subset of that surface and also exposes `/mcp`.
 - Prefer OAuth for shared or production deployments when you move beyond the current API-key flow.
 - Return structured JSON-like payloads from tools and let ChatGPT handle the natural-language response.
 
@@ -32,4 +33,4 @@ Use the hosted server for production ChatGPT, Codex, and Responses API integrati
 - Render
 - Railway
 - Fly.io
-- Any HTTPS host that can expose the FastMCP SSE endpoint
+- Any HTTPS host that can expose the FastMCP HTTP `/mcp` endpoint
